@@ -9,3 +9,4 @@ venv/
 
 # Data artifacts (optional later)
 # data/raw/
+*.log

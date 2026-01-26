@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """
-Phase-2: Chunking (Final Clean Version)
---------------------------------------
-Creates high-quality, sentence-aware, section-preserving
-chunks suitable for embeddings and vector databases.
+Phase-2: Chunking
+-----------------
+Clean, section-aware, sentence-safe chunking for RAG pipelines.
 """
 
 import os
@@ -13,35 +12,25 @@ import argparse
 import logging
 from typing import List
 
-# ================= CONFIG ================= #
+# ---------------- CONFIG ---------------- #
 
 CHUNK_SIZE = 3500        # characters (~800–1000 tokens)
-OVERLAP_SIZE = 400       # preserves semantic continuity
-MIN_CHUNK_LENGTH = 150
-
-EXCLUDED_SECTIONS = {
-    "references",
-    "sources",
-    "external links",
-    "see also",
-    "notes",
-    "further reading"
-}
+OVERLAP_SIZE = 400       # characters
+MIN_CHUNK_SIZE = 500     # avoid junk chunks
 
 OUTPUT_DIR = "phase2_vector"
-OUTPUT_FILE = "chunks.json"
+OUTPUT_FILE = os.path.join(OUTPUT_DIR, "chunks.json")
 
-# ================= LOGGING ================= #
+# ---------------- LOGGING ---------------- #
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s | %(levelname)s | %(message)s"
 )
 
-# ================= HELPERS ================= #
+# ---------------- HELPERS ---------------- #
 
-def load_text(filepath: str) -> str:
-    logging.info(f"Loading input file: {filepath}")
+def load_text_file(filepath: str) -> str:
     with open(filepath, "r", encoding="utf-8") as f:
         text = f.read()
     if not text.strip():
@@ -49,142 +38,120 @@ def load_text(filepath: str) -> str:
     return text
 
 
-def clean_section_title(title: str) -> str:
-    title = re.sub(r"[=]+", "", title)
-    title = title.strip()
-    if not title or len(title) > 80:
-        return "General"
-    return title
+def normalize_section_title(raw: str) -> str:
+    """Remove Wikipedia markup like == ==="""
+    return re.sub(r"=+", "", raw).strip()
 
 
-def split_into_sections(text: str):
+def split_by_sections(text: str):
     """
-    Split Wikipedia text into sections using headers.
+    Split text using Wikipedia-style headers.
     """
-    pattern = r"\n==\s*(.*?)\s*==\n"
+    pattern = r"(==+.*?==+)"
     parts = re.split(pattern, text)
 
     sections = []
-    current_section = "Introduction"
+    current_title = "Introduction"
     buffer = ""
 
     for part in parts:
-        if part.strip() and buffer == "":
-            buffer = part
-        elif part.strip() and buffer:
-            sections.append((current_section, buffer.strip()))
-            current_section = part.strip()
+        if re.match(r"==+.*?==+", part):
+            if buffer.strip():
+                sections.append((current_title, buffer.strip()))
+            current_title = normalize_section_title(part)
             buffer = ""
         else:
             buffer += part
 
     if buffer.strip():
-        sections.append((current_section, buffer.strip()))
+        sections.append((current_title, buffer.strip()))
 
     return sections
 
 
-def clean_section_text(text: str) -> str:
+def sentence_chunk(text: str) -> List[str]:
     """
-    Remove Wikipedia artifacts and headers from section body.
-    """
-    text = re.sub(r"\n=+.*?=+\n", "\n", text)
-    text = re.sub(r"\[\d+\]", "", text)
-    return text.strip()
-
-
-def sentence_tokenize(text: str) -> List[str]:
-    """
-    Lightweight sentence tokenizer (no external deps).
+    Chunk text safely using sentence boundaries + overlap.
     """
     sentences = re.split(r"(?<=[.!?])\s+", text)
-    return [s.strip() for s in sentences if len(s.strip()) > 20]
-
-
-def chunk_sentences(sentences: List[str]) -> List[str]:
-    """
-    Sentence-aware chunking with overlap.
-    """
     chunks = []
-    current_chunk = ""
 
-    for sentence in sentences:
-        if len(current_chunk) + len(sentence) <= CHUNK_SIZE:
-            current_chunk += " " + sentence
+    current = ""
+    for sent in sentences:
+        if len(current) + len(sent) <= CHUNK_SIZE:
+            current += " " + sent if current else sent
         else:
-            if len(current_chunk.strip()) >= MIN_CHUNK_LENGTH:
-                chunks.append(current_chunk.strip())
+            chunks.append(current.strip())
+            current = sent
 
-            # overlap
-            overlap = current_chunk[-OVERLAP_SIZE:]
-            current_chunk = overlap + " " + sentence
+    if current.strip():
+        chunks.append(current.strip())
 
-    if len(current_chunk.strip()) >= MIN_CHUNK_LENGTH:
-        chunks.append(current_chunk.strip())
+    # Add overlap
+    final_chunks = []
+    for i, chunk in enumerate(chunks):
+        if i > 0:
+            overlap = chunks[i - 1][-OVERLAP_SIZE:]
+            chunk = overlap + " " + chunk
+        final_chunks.append(chunk.strip())
 
-    return chunks
+    # Merge small trailing chunks
+    cleaned = []
+    for chunk in final_chunks:
+        if cleaned and len(chunk) < MIN_CHUNK_SIZE:
+            cleaned[-1] += " " + chunk
+        else:
+            cleaned.append(chunk)
+
+    return cleaned
 
 
-# ================= PIPELINE ================= #
+# ---------------- PIPELINE ---------------- #
 
 def run_chunking(input_file: str):
-    logging.info("Starting Phase-2 Chunking")
+    logging.info("Starting Phase-2: Chunking")
 
-    raw_text = load_text(input_file)
-    sections = split_into_sections(raw_text)
+    text = load_text_file(input_file)
+    sections = split_by_sections(text)
+
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
 
     all_chunks = []
-    document_name = os.path.splitext(os.path.basename(input_file))[0].lower()
-    section_index = 0
+    base_name = os.path.splitext(os.path.basename(input_file))[0].lower()
 
-    for raw_title, section_body in sections:
-        section_title = clean_section_title(raw_title)
+    for s_idx, (section_title, section_text) in enumerate(sections):
+        chunks = sentence_chunk(section_text)
 
-        if section_title.lower() in EXCLUDED_SECTIONS:
-            continue
-
-        cleaned_text = clean_section_text(section_body)
-        if len(cleaned_text) < MIN_CHUNK_LENGTH:
-            continue
-
-        sentences = sentence_tokenize(cleaned_text)
-        chunks = chunk_sentences(sentences)
-
-        for chunk_index, chunk in enumerate(chunks):
+        for c_idx, chunk in enumerate(chunks):
             all_chunks.append({
-                "chunk_id": f"{document_name}_s{section_index}_c{chunk_index}",
-                "document": document_name,
+                "chunk_id": f"{base_name}_s{s_idx}_c{c_idx}",
+                "document": base_name,
                 "section": section_title,
                 "text": chunk
             })
 
-        section_index += 1
-
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
-    output_path = os.path.join(OUTPUT_DIR, OUTPUT_FILE)
-
-    with open(output_path, "w", encoding="utf-8") as f:
+    with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
         json.dump(all_chunks, f, indent=2, ensure_ascii=False)
 
     logging.info(f"Chunking completed: {len(all_chunks)} chunks")
-    logging.info(f"Saved to {output_path}")
+    logging.info(f"Output written to {OUTPUT_FILE}")
 
     print("\n✅ Phase-2 Chunking Complete")
-    print(f"   Clean chunks created: {len(all_chunks)}")
-    print(f"   Output: {output_path}\n")
+    print(f"   Total chunks: {len(all_chunks)}")
+    print(f"   Output: {OUTPUT_FILE}\n")
 
 
-# ================= CLI ================= #
+# ---------------- CLI ---------------- #
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Phase-2: Clean, sentence-aware chunking for RAG"
+        description="Phase-2: Chunk Wikipedia article into RAG-ready segments"
     )
     parser.add_argument(
         "--input",
         type=str,
         required=True,
-        help="Path to Phase-1 cleaned Wikipedia text file"
+        help="Path to Phase-1 cleaned text file"
     )
 
     args = parser.parse_args()
