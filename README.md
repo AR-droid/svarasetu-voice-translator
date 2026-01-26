@@ -1,6 +1,6 @@
 # Indic Voice-Enabled RAG System
 
-This project is an end-to-end voice-enabled conversational system built for the AI4Bharat Hiring Challenge. It integrates Automatic Speech Recognition (ASR), Translation, Vector Retrieval (RAG), and Large Language Models (LLM) to answer voice-based questions.
+This project is an end-to-end voice-enabled conversational system  It integrates Automatic Speech Recognition (ASR), Translation, Vector Retrieval (RAG), and Large Language Models (LLM) to answer voice-based questions.
 
 ## Features
 - **Task 1: Data Collection**: Wikipedia scraper with ambiguity handling.
