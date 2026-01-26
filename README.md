@@ -91,4 +91,4 @@ Visit `http://localhost:7860` in your browser.
 - **LLM Provider**: Switched to Groq with `llama-3.3-70b-versatile` for extremely low-latency and high-quality responses.
 
 ---
-*Disclaimer: This project is strictly for evaluation purposes as part of the AI4Bharat Hiring Challenge.*
+
