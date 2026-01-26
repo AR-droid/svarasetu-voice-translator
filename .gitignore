@@ -7,6 +7,21 @@ __pycache__/
 venv/
 .env
 
-# Data artifacts (optional later)
-# data/raw/
+# Models & Data
+*.nemo
+*.pt
+*.bin
+*.mp3
+*.wav
+data/raw/*.txt
+!data/raw/Cricket.txt
+
+# Vector Store
+phase2_vector/faiss_index/
+phase2_vector/chunks.json
+
+# Logs & Temp
+*.log
+*.tmp
+temp/
 *.log
