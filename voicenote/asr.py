@@ -24,6 +24,8 @@ class IndicConformerASR:
 
     def transcribe(self, wav_16k: np.ndarray, lang: str) -> str:
         code = get_language(lang).code
+        if len(wav_16k) < 1600:  # under 0.1 s: nothing to recognise, and the preprocessor fails on it
+            return ""
         wav = self.torch.from_numpy(np.ascontiguousarray(wav_16k, dtype=np.float32)).unsqueeze(0)
         with self.torch.no_grad():
             text = self.model(wav.to(self.device), code, self.decoding)

@@ -85,6 +85,8 @@ class VoiceNoteTranslator:
                 audio = self.tts.synthesize(translation, ref_path, reference_text)
         finally:
             os.remove(ref_path)
+        if len(audio) < 0.1 * self.tts.sample_rate:
+            raise ValueError("TTS produced no audio")
 
         return TranslationResult(
             src_lang=src.code,

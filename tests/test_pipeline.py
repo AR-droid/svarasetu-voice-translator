@@ -25,3 +25,12 @@ def test_same_language_rejected(fakes):
     _, _, pipeline = fakes
     with pytest.raises(ValueError, match="differ"):
         pipeline.translate(tone(2.0), "hi", "hi-IN")
+
+
+def test_empty_tts_output_is_an_error(fakes):
+    import numpy as np
+
+    _, tts, pipeline = fakes
+    tts.synthesize = lambda text, ref_audio_path, ref_text: np.zeros(0, dtype=np.float32)
+    with pytest.raises(ValueError, match="no audio"):
+        pipeline.translate(tone(2.0), "ta", "hi")

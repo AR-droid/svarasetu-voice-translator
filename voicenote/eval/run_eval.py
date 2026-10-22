@@ -41,7 +41,11 @@ def evaluate(rows: list[dict], pipeline: VoiceNoteTranslator, encoder, out_dir: 
     records, in_embs, out_embs = [], [], []
     for i, row in enumerate(rows):
         wav = load_audio(row["audio_path"], ASR_SR)
-        result = pipeline.translate(wav, row["src_lang"], row["tgt_lang"])
+        try:
+            result = pipeline.translate(wav, row["src_lang"], row["tgt_lang"])
+        except Exception as e:  # one bad note shouldn't end a long run
+            print(f"[{i + 1}/{len(rows)}] skipped {row['audio_path']}: {e}")
+            continue
         out_16k = resample(result.audio, result.sample_rate, ASR_SR)
         name = f"{i:04d}_{result.src_lang}-{result.tgt_lang}.wav"
         write_wav(os.path.join(out_dir, "audio", name), result.audio, result.sample_rate)
