@@ -43,9 +43,9 @@ def run(audio_path, src_lang, tgt_lang, consent):
     )
 
 
-with gr.Blocks(title="Voice Note Translator") as demo:
+with gr.Blocks(title="SvaraSetu") as demo:
     gr.Markdown(
-        "# Voice Note Translator\n"
+        "# SvaraSetu (स्वर सेतु): voice bridge\n"
         "Speak in one Indian language. Your friend hears it in theirs, **in your voice**.\n\n"
         "IndicConformer ASR → Indic-to-Indic translation → IndicF5 zero-shot voice cloning."
     )
