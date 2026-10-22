@@ -1,4 +1,4 @@
-# Voice Note Translator: speak Tamil, be heard in Hindi, in your own voice
+# SvaraSetu: speak Tamil, be heard in Hindi, in your own voice
 
 Record a WhatsApp-style voice note in one Indian language. The listener gets it in their language, **spoken in your voice**.
 
