@@ -22,7 +22,8 @@ class SarvamTranslator:
         api_key = api_key or os.getenv("SARVAM_API_KEY")
         if not api_key:
             raise ValueError("SARVAM_API_KEY is not set")
-        self.client = SarvamAI(api_subscription_key=api_key)
+        # A timeout keeps a stalled network call from hanging a long evaluation run.
+        self.client = SarvamAI(api_subscription_key=api_key, timeout=30)
         self.model = model
 
     def translate(self, text: str, src_lang: str, tgt_lang: str) -> str:

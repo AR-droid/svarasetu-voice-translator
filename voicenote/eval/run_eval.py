@@ -70,7 +70,7 @@ def evaluate(rows: list[dict], pipeline: VoiceNoteTranslator, encoder, out_dir: 
         if row.get("ref_translation"):
             record["chrf"] = round(chrf(row["ref_translation"], result.translation), 2)
         records.append(record)
-        print(f"[{i + 1}/{len(rows)}] {record['pair']} sim={record['speaker_sim']} cer={record['round_trip_cer']}")
+        print(f"[{i + 1}/{len(rows)}] {record['pair']} sim={record['speaker_sim']} cer={record['round_trip_cer']} time={result.total_seconds:.1f}s")
 
     # Cross-speaker baseline: similarity of each output to every *other* input.
     if len(records) > 1:
