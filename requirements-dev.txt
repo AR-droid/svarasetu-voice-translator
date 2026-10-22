@@ -1,0 +1,11 @@
+# Lightweight deps for unit tests (models are faked, no torch needed)
+numpy
+scipy
+soundfile
+jiwer
+sacrebleu
+fastapi
+httpx
+python-multipart
+python-dotenv
+pytest

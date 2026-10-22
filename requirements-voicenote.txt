@@ -1,0 +1,23 @@
+# Voice-note translator (see voicenote/). Python 3.10 recommended by IndicF5.
+numpy
+scipy
+soundfile
+librosa
+torch
+torchaudio
+transformers
+onnxruntime
+python-dotenv
+sarvamai
+fastapi
+uvicorn
+python-multipart
+gradio
+git+https://github.com/ai4bharat/IndicF5.git
+# Evaluation
+jiwer
+sacrebleu
+speechbrain
+datasets
+# Optional self-hosted translation backend (TRANSLATOR=indictrans2)
+# IndicTransToolkit

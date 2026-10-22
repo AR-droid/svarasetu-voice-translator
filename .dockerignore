@@ -1,0 +1,8 @@
+.git
+venv
+.env
+data
+results
+phase*/
+services/
+**/__pycache__
