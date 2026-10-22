@@ -25,3 +25,8 @@ phase2_vector/chunks.json
 *.tmp
 temp/
 *.log
+
+# Eval outputs
+results/
+data/eval/
+.pytest_cache/
