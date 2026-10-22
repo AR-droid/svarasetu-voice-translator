@@ -35,7 +35,21 @@ python -m voicenote.eval.make_fleurs_manifest --src ta --tgt hi --n 50 --out dat
 python -m voicenote.eval.run_eval data/eval/fleurs_ta-hi.csv --out results/ta-hi
 ```
 
-Results: _to be filled in after the first GPU run._
+### Results: Tamil → Hindi, 20 FLEURS sentences (Kaggle, 1× Tesla T4)
+
+| Metric | Result | How to read it |
+| --- | --- | --- |
+| Speaker similarity (ECAPA cosine) | **0.70** mean, 0.76 median | Output vs the speaker's own input. Different speakers score **0.23** (cross-speaker baseline), so cloning closes most of the gap |
+| Round-trip CER | **3.0%** mean, 1.8% median | IndicConformer reads the cloned Hindi back almost exactly; 19 of 20 notes under 10% |
+| Translation chrF | **40.1** | Against FLEURS' independent human Hindi sentences, through an ASR → MT cascade |
+| Latency per note | **19.8 s** mean for a 12.3 s note (RTF 1.76) | ASR 0.10 s, translation 1.9 s, voice prompt 0.07 s, **TTS 17.7 s (90%)** |
+
+Observations:
+- **TTS is the bottleneck.** IndicF5 runs 32 flow-matching steps per sentence; fewer steps, fp16 or batching sentences are the obvious levers. ASR on ONNX-GPU is effectively free.
+- **One clear failure:** one note scored speaker similarity 0.09 with a CER of 0.8%, so the words were right but the voice was not. The cause isn't diagnosed yet; checking that note's voice prompt (length, noise) is the next step.
+- Hindi outputs run about 40% shorter than the Tamil inputs (7.1 s vs 12.3 s). Whether that is the language or IndicF5's duration estimate is worth checking against FLEURS' own Hindi recordings.
+
+Per-note results: [`docs/results/fleurs_ta-hi_20.csv`](docs/results/fleurs_ta-hi_20.csv).
 
 ## Run it
 
