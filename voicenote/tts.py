@@ -31,6 +31,20 @@ def split_sentences(text: str, max_chars: int = 200) -> list[str]:
     return chunks
 
 
+def match_checkpoint_keys(checkpoint_keys, model_keys) -> dict[str, str]:
+    """Map checkpoint tensor names onto model parameter names.
+
+    torch.compile wraps modules and inserts "_orig_mod." into parameter names,
+    so names are compared with that segment removed.
+    """
+    by_plain = {key.replace("_orig_mod.", ""): key for key in model_keys}
+    return {
+        key: by_plain[key.replace("_orig_mod.", "")]
+        for key in checkpoint_keys
+        if key.replace("_orig_mod.", "") in by_plain
+    }
+
+
 class IndicF5TTS:
     sample_rate = TTS_SR
 
@@ -41,13 +55,36 @@ class IndicF5TTS:
 
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         token = os.getenv("HF_TOKEN")
-        # IndicF5's remote __init__ builds the vocoder and loads its own weights.
-        # Recent transformers run __init__ under from_pretrained on the meta device,
-        # which breaks that, so the class is constructed directly instead.
+        # IndicF5's remote __init__ builds the Vocos vocoder on real tensors. Recent
+        # transformers run __init__ under from_pretrained on the meta device, which
+        # breaks that, so the class is constructed directly and the trained weights
+        # (model.safetensors) are loaded here, as from_pretrained would have done.
         config = AutoConfig.from_pretrained(model_id, trust_remote_code=True, token=token)
         model_cls = get_class_from_dynamic_module(config.auto_map["AutoModel"], model_id, token=token)
-        self.model = model_cls(config).to(self.device)
-        self.model.eval()
+        self.model = model_cls(config)
+        self.load_report = self._load_weights(model_id, token)
+        self.model.to(self.device).eval()
+
+    def _load_weights(self, model_id: str, token: str | None) -> dict[str, int]:
+        from huggingface_hub import hf_hub_download
+        from safetensors.torch import load_file
+
+        checkpoint = load_file(hf_hub_download(model_id, "model.safetensors", token=token))
+        model_state = self.model.state_dict()
+        mapping = match_checkpoint_keys(checkpoint, model_state)
+        if not mapping:
+            raise RuntimeError(
+                f"None of the {len(checkpoint)} tensors in {model_id}/model.safetensors match the model; "
+                f"checkpoint keys look like {list(checkpoint)[:3]}, model keys like {list(model_state)[:3]}"
+            )
+        self.model.load_state_dict({mapping[k]: v for k, v in checkpoint.items() if k in mapping}, strict=False)
+        report = {
+            "checkpoint_tensors": len(checkpoint),
+            "loaded": len(mapping),
+            "model_tensors_not_in_checkpoint": len(set(model_state) - set(mapping.values())),
+        }
+        print(f"IndicF5 weights: {report}")
+        return report
 
     def _generate(self, text: str, ref_audio_path: str, ref_text: str) -> np.ndarray:
         audio = np.asarray(self.model(text, ref_audio_path=ref_audio_path, ref_text=ref_text))
