@@ -2,6 +2,12 @@
 
 Record a WhatsApp-style voice note in one Indian language. The listener gets it in their language, **spoken in your voice**.
 
+### Demo (sound on)
+
+[![SvaraSetu demo: a Hindi voice note comes back in Tamil in the same voice](docs/demo/svarasetu-demo.jpg)](docs/demo/svarasetu-demo.mp4)
+
+A 16-second Hindi note, *"जब जब मुंह खोलते वो मीठी बोल बोलना चाहिए"* ("whenever you open your mouth, speak sweet words"), comes back in Tamil in the same voice. [Watch the video](docs/demo/svarasetu-demo.mp4); click the image to open it.
+
 ```
 voice note ─▶ IndicConformer ASR ─▶ Indic→Indic translation ─▶ IndicF5 zero-shot voice cloning ─▶ translated note
  (any 16 kHz+)   (transcript)          (Sarvam or IndicTrans2)     (prompt = best 8 s of your note)
