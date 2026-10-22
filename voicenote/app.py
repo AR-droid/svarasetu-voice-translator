@@ -1,5 +1,7 @@
 """Gradio web demo: record a note, pick languages, hear it back in your own voice."""
 
+import os
+
 import gradio as gr
 
 from voicenote.languages import LANGUAGES
@@ -64,4 +66,5 @@ with gr.Blocks(title="Voice Note Translator") as demo:
 
 
 if __name__ == "__main__":
-    demo.queue().launch(server_name="0.0.0.0", server_port=7860)
+    # GRADIO_SHARE=1 gives a temporary public *.gradio.live link (e.g. from Kaggle or Colab).
+    demo.queue().launch(server_name="0.0.0.0", server_port=7860, share=os.getenv("GRADIO_SHARE") == "1")

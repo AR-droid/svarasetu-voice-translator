@@ -59,6 +59,8 @@ curl -F audio=@note.ogg -F src_lang=ta -F tgt_lang=hi localhost:8000/translate
 # → transcript, translation, timings, real_time_factor, audio_wav_base64
 ```
 
+**On Kaggle (free GPU):** import [`notebooks/kaggle_run.ipynb`](notebooks/kaggle_run.ipynb), turn on a GPU and Internet, add `HF_TOKEN` and `SARVAM_API_KEY` as Kaggle Secrets, and Run All. It runs a smoke test, the FLEURS evaluation, and starts the demo with a public link.
+
 Docker: `docker build -t voicenote . && docker run --gpus all --env-file .env -p 7860:7860 voicenote`
 
 Unit tests use fake models, so they run without a GPU or tokens: `pip install -r requirements-dev.txt && pytest`.
