@@ -36,12 +36,18 @@ class IndicF5TTS:
 
     def __init__(self, model_id: str = MODEL_ID, device: str | None = None):
         import torch
-        from transformers import AutoModel
+        from transformers import AutoConfig
+        from transformers.dynamic_module_utils import get_class_from_dynamic_module
 
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
-        self.model = AutoModel.from_pretrained(
-            model_id, trust_remote_code=True, token=os.getenv("HF_TOKEN")
-        ).to(self.device)
+        token = os.getenv("HF_TOKEN")
+        # IndicF5's remote __init__ builds the vocoder and loads its own weights.
+        # Recent transformers run __init__ under from_pretrained on the meta device,
+        # which breaks that, so the class is constructed directly instead.
+        config = AutoConfig.from_pretrained(model_id, trust_remote_code=True, token=token)
+        model_cls = get_class_from_dynamic_module(config.auto_map["AutoModel"], model_id, token=token)
+        self.model = model_cls(config).to(self.device)
+        self.model.eval()
 
     def _generate(self, text: str, ref_audio_path: str, ref_text: str) -> np.ndarray:
         audio = np.asarray(self.model(text, ref_audio_path=ref_audio_path, ref_text=ref_text))
